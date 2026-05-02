@@ -424,4 +424,52 @@ ORDER BY createdAt DESC;
 
 The query is correct, but it is slow because the table is large and the filtering plus sorting are expensive. The best fix is a composite index, not indexes on every column.
 
+# Stage 4
+
+## Problem
+
+If notifications are fetched on every page load for every student, the database will keep getting hit for the same data again and again.
+
+## Suggested solution
+
+I would not load the full notification list every time the page refreshes. A better way is to mix caching, pagination, and real-time updates.
+
+### 1. Cache unread notifications and badge count
+
+Keep the unread count and recent notifications in Redis or some other fast cache.
+
+**How it helps:** Most requests can use the cache instead of going to the database.
+
+**Tradeoff:** The data may go slightly out of date, so it needs a short TTL or refresh logic.
+
+### 2. Fetch only when needed
+
+Do not load everything by default. Fetch only the first page, or load the full list only when the user opens the notification panel.
+
+**How it helps:** It reduces unnecessary database reads and makes the page faster.
+
+**Tradeoff:** The user may wait for one extra request when they open notifications.
+
+### 3. Use push instead of repeated polling
+
+Use WebSockets or Server-Sent Events so new notifications are pushed to the client.
+
+**How it helps:** The server only sends data when there is something new.
+
+**Tradeoff:** It is harder to manage than simple polling, especially when scaling.
+
+### 4. Keep pagination and proper indexes
+
+Even with caching, the database query should still use pagination and the composite index on `(studentID, isRead, createdAt)`.
+
+**How it helps:** The fallback query will still be fast.
+
+**Tradeoff:** Pagination adds a little extra logic, and large offsets can still slow things down.
+
+## Best approach
+
+The best approach is a hybrid one. Cache the unread count, fetch notifications only when needed, and push new updates in real time. That gives better performance and avoids hitting the database on every page load.
+
+
+
 
