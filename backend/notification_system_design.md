@@ -342,4 +342,86 @@ As the number of notifications grows, a few issues can show up:
 - Use a queue or outbox pattern for sending notifications to many users.
 - Keep real-time delivery separate from the main write path so the API stays responsive.
 
+# Stage 3
+
+## Is the query accurate?
+
+Yes. The query is correct for getting unread notifications of one student:
+
+```sql
+SELECT *
+FROM notifications
+WHERE studentID = 1042 AND isRead = false
+ORDER BY createdAt DESC;
+```
+
+The only issue here is `SELECT *` because it fetches more data than needed.
+
+## Why is it slow?
+
+It is slow because the table now has millions of rows and the database may need to scan many rows and sort the result by `createdAt`.
+
+Without the right index, this becomes expensive.
+
+## My changes:
+
+I would select only the needed columns, add a composite index, and use pagination.
+
+### Better query
+
+```sql
+SELECT id, studentID, title, message, notificationType, isRead, createdAt
+FROM notifications
+WHERE studentID = 1042
+  AND isRead = false
+ORDER BY createdAt DESC
+LIMIT 20 OFFSET 0;
+```
+
+### Recommended index
+
+```sql
+CREATE INDEX idx_notifications_student_read_created
+ON notifications (studentID, isRead, createdAt DESC);
+```
+
+## Approximate computing cost:
+
+Without the index, the query is close to a table scan plus sorting, so the cost grows with table size.
+
+With the composite index, the database can find the matching rows much faster.
+
+## Should we add indexes on every column?
+
+No. Adding indexes on every column is not a good solution.
+
+Indexes help reads, but too many of them also slow down inserts, updates, and deletes and use extra storage.
+
+So, indexes should be added only where the query pattern actually needs them.
+
+## Query for placement notifications in the last 7 days
+
+If `notificationType` can be `Event`, `Result`, or `Placement`, the query is:
+
+```sql
+SELECT DISTINCT studentID
+FROM notifications
+WHERE notificationType = 'Placement'
+  AND createdAt >= CURRENT_TIMESTAMP - INTERVAL '7 days';
+```
+
+If the API needs the notification details too, use:
+
+```sql
+SELECT studentID, id, title, message, createdAt
+FROM notifications
+WHERE notificationType = 'Placement'
+  AND createdAt >= CURRENT_TIMESTAMP - INTERVAL '7 days'
+ORDER BY createdAt DESC;
+```
+
+## Final answer
+
+The query is correct, but it is slow because the table is large and the filtering plus sorting are expensive. The best fix is a composite index, not indexes on every column.
+
 
