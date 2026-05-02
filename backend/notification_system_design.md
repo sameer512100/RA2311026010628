@@ -470,6 +470,72 @@ Even with caching, the database query should still use pagination and the compos
 
 The best approach is a hybrid one. Cache the unread count, fetch notifications only when needed, and push new updates in real time. That gives better performance and avoids hitting the database on every page load.
 
+# Stage 5
+
+## Problem with the naive approach
+
+The naive `notify_all` that sends email, saves to DB, and pushes to app sequentially will fail at scale. It’s slow, brittle, and hard to retry. Instead, make the process asynchronous: persist the work (DB/outbox) quickly, then process sends in parallel with workers and retries.
+
+- It’s sequential — sending 50k emails one by one takes too long.
+- If some emails fail (200 failed midway), the job is partially done and hard to resume safely.
+- Retries without idempotency can cause duplicates.
+- External failures (email API rate limits) block the whole operation.
+
+## What to do when 200 sends fail mid-run
+
+- Don’t abort: record failed IDs and continue processing the rest.
+- Store failures in a DLQ or a `failed_sends` table with error details.
+- Retry with exponential backoff via workers; after N retries surface to ops for manual handling.
+- Make sending idempotent (check recipient status or attach a send token).
+
+## Reliable design:
+
+1. API (HR clicks Notify All): create a `notification` and `notification_recipients` rows and write `outbox` events in one DB transaction. Return immediately.
+2. Worker pool: consume outbox messages in parallel, batch email sends where possible, push in-app notifications, update recipient status, and log results.
+3. Retries & DLQ: workers retry failures; items that exhaust retries go to DLQ for investigation.
+
+Benefits: fast API response, parallel processing, controlled retries, clear audit trail.
+
+## Minimal pseudocode
+
+Producer:
+
+```
+function notify_all(studentIds, message) {
+  notificationId = db.insert('notifications', { message, createdAt: now() })
+  db.transaction(() => {
+    for (id of studentIds) {
+      db.insert('notification_recipients', { notificationId, userId: id, status: 'pending' })
+      db.insert('outbox', { id: uuid(), type: 'send_notification', payload: { notificationId, userId: id } })
+    }
+  })
+  return { notificationId }
+}
+```
+
+Worker:
+
+```
+for each message in queue {
+  if (recipient.status == 'sent') { ack(); continue }
+  try {
+    batchEmailSendIfPossible(message.userId, message.payload)
+    pushToApp(message.userId, message.payload)
+    markRecipientSent(message.userId, message.notificationId)
+    ack()
+  } catch (err) {
+    retryOrDLQ(message, err)
+    markRecipientFailed(...)
+  }
+}
+```
+
+## Final Thoughts:
+
+- Batching improves throughput but needs careful error attribution.
+- Outbox + worker gives durability and avoids partial state, but adds complexity.
+- Make send operations idempotent to allow safe retries.
+
 
 
 
