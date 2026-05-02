@@ -538,4 +538,54 @@ for each message in queue {
 
 
 
+# Stage 6
+
+## Problem statement
+
+For this stage, the goal is to show the top 10 unread notifications in a Priority Inbox.
+
+Priority order is:
+- Placement notifications first
+- Then Result notifications
+- Then Event notifications
+
+Inside the same type, latest notification should come first.
+
+## What I implemented
+
+I wrote a Node.js script in `backend/stage6/topPriority.js`.
+
+The script does this:
+1. Reads notifications from API response data.
+2. Gives each notification a score using type weight + timestamp.
+3. Sorts by score in descending order.
+4. Picks the first 10 as final priority inbox.
+
+I used these weights:
+- Placement = 3
+- Result = 2
+- Event = 1
+
+Score formula i used:
+- `score = weight * 1e13 + timestamp`
+
+
+## Files used
+
+- `backend/stage6/topPriority.js` (code)
+- `backend/stage6/sample_notifications.json` (input)
+- `backend/stage6/top10_output.txt` (generated output)
+
+## Efficient update plan for new notifications
+
+Current assignment code re-sorts the list each run.
+
+If notifications keep coming continuously, a better approach is to keep a min-heap of size 10:
+- push new notification score
+- if size > 10, remove smallest
+
+This keeps updates fast and memory small.
+
+
+
 

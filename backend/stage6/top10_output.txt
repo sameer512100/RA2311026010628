@@ -1,0 +1,10 @@
+1. [Placement] Tesla Inc. hiring (2026-05-01 21:37:57) - id=7adda19f-4e45-46c4-af3a-208279d19c06
+2. [Placement] Advanced Micro Devices Inc. hiring (2026-05-01 15:38:03) - id=74da13a1-b3ea-452e-88e2-a07102f0c4c1
+3. [Placement] Apple Inc. hiring (2026-05-01 10:38:39) - id=ca2e9d4a-2284-429a-8f2d-86fabf13ba9b
+4. [Placement] Apple Inc. hiring (2026-05-01 09:07:45) - id=faa2ecaa-ea2d-4841-9969-cee3705b84f7
+5. [Result] external (2026-05-02 04:39:15) - id=5113670c-25f8-4cb5-be13-637c364b025f
+6. [Result] end-sem (2026-05-01 23:07:33) - id=069e3f17-477b-4419-b757-87b8f0f43e9f
+7. [Result] mid-sem (2026-05-01 22:38:51) - id=a3775dbb-b783-467b-a0e8-8e1273ed6cdf
+8. [Result] mid-sem (2026-05-01 21:39:21) - id=2c85e4ab-91aa-47ba-a96e-45b358927c2d
+9. [Result] external (2026-05-01 20:09:03) - id=2876abe8-12e2-482b-ad36-7039c4f7d0cd
+10. [Result] mid-sem (2026-05-01 18:37:39) - id=e70d3a43-e133-483b-b2de-1c9adb66422b
